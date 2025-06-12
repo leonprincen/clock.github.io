@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Responsieve Klok & Tijdbeheer</title>
+    <title>Klok App - Swipe om te onthullen</title>
     <style>
         * {
             margin: 0;
@@ -29,6 +29,7 @@
             --warning: #ffc107;
             --event-indicator: #dc3545;
             --today-highlight: #ffc107;
+            --header-height: 70px;
         }
 
         [data-theme="dark"] {
@@ -100,14 +101,69 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
-            opacity: 0;
-            animation: fadeIn 0.8s ease-in-out forwards;
-            overflow-y: auto; /* Zorgt voor normale scroll */
-            -webkit-overflow-scrolling: touch; /* Soepel scrollen op iOS */
+            overflow: hidden;
+            height: 100vh;
+            touch-action: pan-y;
+            position: relative;
+            transition: background-color 0.3s;
         }
 
-        @keyframes fadeIn {
-            to { opacity: 1; }
+        .initial-view {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .initial-view.hidden {
+            transform: translateY(-100%);
+        }
+
+        .swipe-indicator {
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-5px); }
+            100% { opacity: 0.5; transform: translateY(0); }
+        }
+
+        .swipe-indicator-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .swipe-indicator-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-secondary);
+        }
+
+        .content-container {
+            height: calc(100vh - var(--header-height));
+            overflow-y: auto;
+            padding-top: var(--header-height);
+            -webkit-overflow-scrolling: touch;
         }
 
         .header {
@@ -118,9 +174,12 @@
             flex-direction: column;
             align-items: center;
             gap: 1rem;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 100;
+            height: var(--header-height);
         }
 
         @media (min-width: 768px) {
@@ -197,6 +256,9 @@
             border-bottom: 1px solid var(--border);
             flex-wrap: wrap;
             transition: transform 0.3s ease;
+            position: sticky;
+            top: var(--header-height);
+            z-index: 99;
         }
 
         @media (max-width: 767px) {
@@ -478,7 +540,7 @@
             position: relative;
             box-shadow: 0 4px 8px var(--shadow);
             transition: transform 0.3s ease;
-            min-height: 220px; /* Voorkomt dat klokken te klein worden */
+            min-height: 220px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -1378,165 +1440,189 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="local-time" id="localTime"></div>
-        <div class="settings-menu">
-            <button class="settings-btn" id="settingsBtn">⋯</button>
-            <div class="settings-dropdown" id="settingsDropdown">
-                <div class="theme-option" data-theme="default">Standaard</div>
-                <div class="theme-option" data-theme="dark">Donker</div>
-                <div class="theme-option" data-theme="ocean">Oceaan</div>
-                <div class="theme-option" data-theme="retro">Retro</div>
-                <div class="theme-option" data-theme="high-contrast">Hoog Contrast</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="tabs">
-        <button class="tab active" data-tab="clock">Klok</button>
-        <button class="tab" data-tab="stopwatch">Stopwatch</button>
-        <button class="tab" data-tab="timer">Timer</button>
-        <button class="tab" data-tab="agenda">Agenda</button>
-        <button class="tab" data-tab="lists">Lijsten</button>
-    </div>
-
-    <div id="clock" class="tab-content active">
+    <!-- Initial view met alleen klok -->
+    <div class="initial-view" id="initialView">
         <div class="main-clock-container">
-            <div class="analog-clock" id="mainAnalogClock">
-                <div class="clock-hand hour-hand" id="hourHand"></div>
-                <div class="clock-hand minute-hand" id="minuteHand"></div>
-                <div class="clock-hand second-hand" id="secondHand"></div>
+            <div class="analog-clock" id="initialAnalogClock">
+                <div class="clock-hand hour-hand" id="initialHourHand"></div>
+                <div class="clock-hand minute-hand" id="initialMinuteHand"></div>
+                <div class="clock-hand second-hand" id="initialSecondHand"></div>
                 <div class="clock-center"></div>
             </div>
-            <div class="digital-time" id="mainDigitalTime"></div>
+            <div class="digital-time" id="initialDigitalTime"></div>
         </div>
-
-        <div class="world-clocks-section">
-            <div class="world-clock-controls">
-                <select id="timezoneSelect">
-                    <option value="">Selecteer een tijdzone</option>
-                    <option value="America/New_York">New York (EST)</option>
-                    <option value="America/Los_Angeles">Los Angeles (PST)</option>
-                    <option value="Europe/London">Londen (GMT)</option>
-                    <option value="Europe/Paris">Parijs (CET)</option>
-                    <option value="Europe/Berlin">Berlijn (CET)</option>
-                    <option value="Asia/Tokyo">Tokyo (JST)</option>
-                    <option value="Asia/Shanghai">Shanghai (CST)</option>
-                    <option value="Asia/Dubai">Dubai (GST)</option>
-                    <option value="Australia/Sydney">Sydney (AEDT)</option>
-                    <option value="Pacific/Auckland">Auckland (NZDT)</option>
-                </select>
-                <button class="btn btn-primary" id="addWorldClock">Toevoegen</button>
+        <div class="swipe-indicator" id="swipeIndicator">
+            <div class="swipe-indicator-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/>
+                </svg>
             </div>
-            <div class="world-clocks-grid" id="worldClocksGrid"></div>
+            <div>Swipe omhoog om de app te onthullen</div>
         </div>
     </div>
 
-    <div id="stopwatch" class="tab-content">
-        <div class="stopwatch-container">
-            <div class="stopwatch-display" id="stopwatchDisplay">00:00:000</div>
-            <div class="stopwatch-controls">
-                <button class="btn btn-success" id="startStopwatch">Start</button>
-                <button class="btn btn-danger" id="stopStopwatch">Stop</button>
-                <button class="btn btn-primary" id="resetStopwatch">Reset</button>
-                <button class="btn btn-primary" id="lapStopwatch">Lap</button>
-            </div>
-            <div class="laps-container" id="lapsContainer"></div>
-        </div>
-    </div>
-
-    <div id="timer" class="tab-content">
-        <div class="timer-container">
-            <div class="timer-display" id="timerDisplay">00:00:00</div>
-            <div class="timer-inputs">
-                <input type="number" id="timerHours" placeholder="UU" min="0" max="23" value="0">
-                <input type="number" id="timerMinutes" placeholder="MM" min="0" max="59" value="0">
-                <input type="number" id="timerSeconds" placeholder="SS" min="0" max="59" value="0">
-            </div>
-            <div class="timer-controls">
-                <button class="btn btn-success" id="startTimer">Start</button>
-                <button class="btn btn-danger" id="pauseTimer">Pauze</button>
-                <button class="btn btn-primary" id="resetTimer">Reset</button>
+    <!-- Volledige app-inhoud -->
+    <div class="content-container" id="contentContainer">
+        <div class="header">
+            <div class="local-time" id="localTime"></div>
+            <div class="settings-menu">
+                <button class="settings-btn" id="settingsBtn">⋯</button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <div class="theme-option" data-theme="default">Standaard</div>
+                    <div class="theme-option" data-theme="dark">Donker</div>
+                    <div class="theme-option" data-theme="ocean">Oceaan</div>
+                    <div class="theme-option" data-theme="retro">Retro</div>
+                    <div class="theme-option" data-theme="high-contrast">Hoog Contrast</div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="agenda" class="tab-content">
-        <div class="agenda-container">
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <div class="calendar-nav">
-                        <button id="prevMonth">&lt; Vorige</button>
-                        <button id="todayBtn">Vandaag</button>
+        <div class="tabs">
+            <button class="tab active" data-tab="clock">Klok</button>
+            <button class="tab" data-tab="stopwatch">Stopwatch</button>
+            <button class="tab" data-tab="timer">Timer</button>
+            <button class="tab" data-tab="agenda">Agenda</button>
+            <button class="tab" data-tab="lists">Lijsten</button>
+        </div>
+
+        <div id="clock" class="tab-content active">
+            <div class="main-clock-container">
+                <div class="analog-clock" id="mainAnalogClock">
+                    <div class="clock-hand hour-hand" id="hourHand"></div>
+                    <div class="clock-hand minute-hand" id="minuteHand"></div>
+                    <div class="clock-hand second-hand" id="secondHand"></div>
+                    <div class="clock-center"></div>
+                </div>
+                <div class="digital-time" id="mainDigitalTime"></div>
+            </div>
+
+            <div class="world-clocks-section">
+                <div class="world-clock-controls">
+                    <select id="timezoneSelect">
+                        <option value="">Selecteer een tijdzone</option>
+                        <option value="America/New_York">New York (EST)</option>
+                        <option value="America/Los_Angeles">Los Angeles (PST)</option>
+                        <option value="Europe/London">Londen (GMT)</option>
+                        <option value="Europe/Paris">Parijs (CET)</option>
+                        <option value="Europe/Berlin">Berlijn (CET)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Asia/Shanghai">Shanghai (CST)</option>
+                        <option value="Asia/Dubai">Dubai (GST)</option>
+                        <option value="Australia/Sydney">Sydney (AEDT)</option>
+                        <option value="Pacific/Auckland">Auckland (NZDT)</option>
+                    </select>
+                    <button class="btn btn-primary" id="addWorldClock">Toevoegen</button>
+                </div>
+                <div class="world-clocks-grid" id="worldClocksGrid"></div>
+            </div>
+        </div>
+
+        <div id="stopwatch" class="tab-content">
+            <div class="stopwatch-container">
+                <div class="stopwatch-display" id="stopwatchDisplay">00:00:000</div>
+                <div class="stopwatch-controls">
+                    <button class="btn btn-success" id="startStopwatch">Start</button>
+                    <button class="btn btn-danger" id="stopStopwatch">Stop</button>
+                    <button class="btn btn-primary" id="resetStopwatch">Reset</button>
+                    <button class="btn btn-primary" id="lapStopwatch">Lap</button>
+                </div>
+                <div class="laps-container" id="lapsContainer"></div>
+            </div>
+        </div>
+
+        <div id="timer" class="tab-content">
+            <div class="timer-container">
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
+                <div class="timer-inputs">
+                    <input type="number" id="timerHours" placeholder="UU" min="0" max="23" value="0">
+                    <input type="number" id="timerMinutes" placeholder="MM" min="0" max="59" value="0">
+                    <input type="number" id="timerSeconds" placeholder="SS" min="0" max="59" value="0">
+                </div>
+                <div class="timer-controls">
+                    <button class="btn btn-success" id="startTimer">Start</button>
+                    <button class="btn btn-danger" id="pauseTimer">Pauze</button>
+                    <button class="btn btn-primary" id="resetTimer">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="agenda" class="tab-content">
+            <div class="agenda-container">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button id="prevMonth">&lt; Vorige</button>
+                            <button id="todayBtn">Vandaag</button>
+                        </div>
+                        <div class="calendar-title" id="currentMonthYear">Juni 2025</div>
+                        <div class="calendar-nav">
+                            <button id="nextMonth">Volgende &gt;</button>
+                        </div>
                     </div>
-                    <div class="calendar-title" id="currentMonthYear">Juni 2025</div>
-                    <div class="calendar-nav">
-                        <button id="nextMonth">Volgende &gt;</button>
+                    
+                    <div class="calendar-weekdays">
+                        <div class="calendar-weekday">Zo</div>
+                        <div class="calendar-weekday">Ma</div>
+                        <div class="calendar-weekday">Di</div>
+                        <div class="calendar-weekday">Wo</div>
+                        <div class="calendar-weekday">Do</div>
+                        <div class="calendar-weekday">Vr</div>
+                        <div class="calendar-weekday">Za</div>
                     </div>
+                    
+                    <div class="calendar-days" id="calendarDays"></div>
                 </div>
                 
-                <div class="calendar-weekdays">
-                    <div class="calendar-weekday">Zo</div>
-                    <div class="calendar-weekday">Ma</div>
-                    <div class="calendar-weekday">Di</div>
-                    <div class="calendar-weekday">Wo</div>
-                    <div class="calendar-weekday">Do</div>
-                    <div class="calendar-weekday">Vr</div>
-                    <div class="calendar-weekday">Za</div>
+                <div class="day-events-container" id="dayEventsContainer">
+                    <div class="day-events-header">
+                        <div class="day-events-title" id="dayEventsTitle">Evenementen op 11 juni 2025</div>
+                        <button class="btn btn-primary" id="addEventToDay">Toevoegen</button>
+                    </div>
+                    <div class="day-events-list" id="dayEventsList"></div>
+                </div>
+
+                <div class="agenda-form">
+                    <h3>Nieuw Agenda-item</h3>
+                    <div class="form-group">
+                        <label for="agendaTitle">Titel:</label>
+                        <input type="text" id="agendaTitle" placeholder="Voer titel in">
+                    </div>
+                    <div class="form-group">
+                        <label for="agendaTime">Tijd:</label>
+                        <input type="datetime-local" id="agendaTime">
+                    </div>
+                    <button class="btn btn-primary" id="addAgendaItem">Toevoegen</button>
+                </div>
+
+                <div class="agenda-controls">
+                    <input type="text" id="searchAgenda" placeholder="Zoeken in agenda...">
+                </div>
+
+                <div class="agenda-list" id="agendaList"></div>
+            </div>
+        </div>
+
+        <div id="lists" class="tab-content">
+            <div class="lists-container">
+                <div class="lists-header">
+                    <div class="lists-tabs" id="listsTabs">
+                        <!-- Lijst tabs worden hier dynamisch toegevoegd -->
+                    </div>
+                    <button class="add-list-btn" id="addListBtn">+ Nieuwe Lijst</button>
                 </div>
                 
-                <div class="calendar-days" id="calendarDays"></div>
-            </div>
-            
-            <div class="day-events-container" id="dayEventsContainer">
-                <div class="day-events-header">
-                    <div class="day-events-title" id="dayEventsTitle">Evenementen op 11 juni 2025</div>
-                    <button class="btn btn-primary" id="addEventToDay">Toevoegen</button>
-                </div>
-                <div class="day-events-list" id="dayEventsList"></div>
-            </div>
-
-            <div class="agenda-form">
-                <h3>Nieuw Agenda-item</h3>
-                <div class="form-group">
-                    <label for="agendaTitle">Titel:</label>
-                    <input type="text" id="agendaTitle" placeholder="Voer titel in">
-                </div>
-                <div class="form-group">
-                    <label for="agendaTime">Tijd:</label>
-                    <input type="datetime-local" id="agendaTime">
-                </div>
-                <button class="btn btn-primary" id="addAgendaItem">Toevoegen</button>
-            </div>
-
-            <div class="agenda-controls">
-                <input type="text" id="searchAgenda" placeholder="Zoeken in agenda...">
-            </div>
-
-            <div class="agenda-list" id="agendaList"></div>
-        </div>
-    </div>
-
-    <div id="lists" class="tab-content">
-        <div class="lists-container">
-            <div class="lists-header">
-                <div class="lists-tabs" id="listsTabs">
-                    <!-- Lijst tabs worden hier dynamisch toegevoegd -->
-                </div>
-                <button class="add-list-btn" id="addListBtn">+ Nieuwe Lijst</button>
-            </div>
-            
-            <div id="listsContent">
-                <div class="empty-list" id="emptyListsMessage">
-                    <h3>Geen lijsten beschikbaar</h3>
-                    <p>Klik op "Nieuwe Lijst" om je eerste to-do lijst te maken</p>
+                <div id="listsContent">
+                    <div class="empty-list" id="emptyListsMessage">
+                        <h3>Geen lijsten beschikbaar</h3>
+                        <p>Klik op "Nieuwe Lijst" om je eerste to-do lijst te maken</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Mobiele navigatie knop -->
-    <button class="mobile-menu-btn" id="mobileMenuBtn">≡</button>
+        <!-- Mobiele navigatie knop -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn">≡</button>
+    </div>
 
     <!-- Modal voor lijst bewerken -->
     <div class="edit-list-modal" id="editListModal">
@@ -1567,6 +1653,8 @@
         let todoLists = [];
         let currentListId = null;
         let editingListId = null;
+        let touchStartY = 0;
+        let isContentRevealed = false;
         
         // Kalender variabelen
         let calendarYear, calendarMonth;
@@ -1589,7 +1677,50 @@
             
             // Mobiele menu knop
             document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
+            
+            // Touch events voor swipe
+            document.addEventListener('touchstart', handleTouchStart, false);
+            document.addEventListener('touchmove', handleTouchMove, false);
+            
+            // Scroll event voor desktop
+            document.addEventListener('wheel', handleWheel, { passive: false });
+            
+            // Klik event om app te onthullen (voor desktop)
+            document.getElementById('initialView').addEventListener('click', revealContent);
         });
+
+        function handleTouchStart(e) {
+            touchStartY = e.touches[0].clientY;
+        }
+
+        function handleTouchMove(e) {
+            if (!touchStartY || isContentRevealed) return;
+            
+            const touchY = e.touches[0].clientY;
+            const diffY = touchStartY - touchY;
+            
+            if (diffY > 200) { // Swipe omhoog
+                revealContent();
+                e.preventDefault();
+            }
+        }
+
+        function handleWheel(e) {
+            if (isContentRevealed) return;
+            
+            if (e.deltaY > 0) { // Scroll naar beneden
+                revealContent();
+                e.preventDefault();
+            }
+        }
+
+        function revealContent() {
+            if (isContentRevealed) return;
+            
+            document.getElementById('initialView').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            isContentRevealed = true;
+        }
 
         function toggleMobileMenu() {
             const tabs = document.querySelector('.tabs');
@@ -1718,6 +1849,7 @@
                 hour12: false
             });
             document.getElementById('localTime').textContent = timeString;
+            document.getElementById('initialDigitalTime').textContent = timeString;
         }
 
         function formatTime(milliseconds) {
@@ -1741,6 +1873,7 @@
 
         // Klokken
         function initializeClocks() {
+            setupAnalogClock('initialAnalogClock');
             setupAnalogClock('mainAnalogClock');
             loadWorldClocks();
             
@@ -1757,7 +1890,7 @@
                 number.textContent = i;
                 
                 const angle = (i * 30) - 90;
-                const radius = 110;
+                const radius = clockId === 'initialAnalogClock' ? 100 : 110;
                 const x = Math.cos(angle * Math.PI / 180) * radius;
                 const y = Math.sin(angle * Math.PI / 180) * radius;
                 
@@ -1771,9 +1904,9 @@
         function updateClocks() {
             const now = new Date();
             
-            // Update hoofdklok
+            // Update hoofdklokken
+            updateAnalogClock('initialAnalogClock', now);
             updateAnalogClock('mainAnalogClock', now);
-            document.getElementById('mainDigitalTime').textContent = now.toLocaleTimeString('nl-NL');
             
             // Update wereldklokken
             worldClocks.forEach((worldClock, index) => {
