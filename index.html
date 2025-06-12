@@ -1,5 +1,20 @@
 <!DOCTYPE html>
 <html lang="nl">
+<script>
+    // Geheime toegangscode (die alleen in je QR-link zit)
+    const allowedCode = "abc123";
+      
+    // Lees de code uit de URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessCode = urlParams.get("code");
+      
+    if (accessCode !== allowedCode) {
+        // Geen toegang? Dan wegwezen
+        alert("Toegang geweigerd.");
+        window.location.href = "https://google.com";
+    }
+</script>
+      
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -171,7 +186,8 @@
             border-bottom: 1px solid var(--border);
             padding: 1rem;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            justify-content: space-between;
             align-items: center;
             gap: 1rem;
             position: fixed;
@@ -257,6 +273,7 @@
             flex-wrap: wrap;
             transition: transform 0.3s ease;
             position: sticky;
+            transform: translateY(-130%);
             top: var(--header-height);
             z-index: 99;
         }
@@ -264,7 +281,7 @@
         @media (max-width: 767px) {
             .tabs {
                 position: fixed;
-                bottom: 80px;
+                bottom: 0px;
                 left: 0;
                 right: 0;
                 z-index: 98;
@@ -1661,66 +1678,60 @@
         let selectedDate = null;
         let selectedDayEvents = [];
 
-        // Initialisatie
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSettings();
-            initializeClocks();
-            initializeTabs();
-            initializeSettings();
-            initializeStopwatch();
-            initializeTimer();
-            initializeAgenda();
-            initializeLists();
-            updateLocalTime();
-            setInterval(updateLocalTime, 1000);
-            setInterval(updateClocks, 100);
-            
-            // Mobiele menu knop
-            document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
-            
-            // Touch events voor swipe
+            // Initialisatiedocument.addEventListener('DOMContentLoaded', function() {
+        loadSettings();
+        initializeClocks();
+        initializeTabs();
+        initializeSettings();
+        initializeStopwatch();
+        initializeTimer();
+        initializeAgenda();
+        initializeLists();
+        updateLocalTime();
+        setInterval(updateLocalTime, 1000);
+        setInterval(updateClocks, 100);
+        
+        // Mobiele menu knop
+        document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
+        
+        // Controleer of het een mobiel apparaat is
+        if (isMobileDevice()) {
+            // Alleen touch events voor mobiele apparaten
             document.addEventListener('touchstart', handleTouchStart, false);
             document.addEventListener('touchmove', handleTouchMove, false);
-            
-            // Scroll event voor desktop
-            document.addEventListener('wheel', handleWheel, { passive: false });
-            
-            // Klik event om app te onthullen (voor desktop)
+        } else {
+            // Alleen klik event voor desktop
             document.getElementById('initialView').addEventListener('click', revealContent);
-        });
-
-        function handleTouchStart(e) {
-            touchStartY = e.touches[0].clientY;
         }
 
-        function handleTouchMove(e) {
-            if (!touchStartY || isContentRevealed) return;
-            
-            const touchY = e.touches[0].clientY;
-            const diffY = touchStartY - touchY;
-            
-            if (diffY > 200) { // Swipe omhoog
-                revealContent();
-                e.preventDefault();
-            }
-        }
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+            window.innerWidth <= 768;
+    }
 
-        function handleWheel(e) {
-            if (isContentRevealed) return;
-            
-            if (e.deltaY > 0) { // Scroll naar beneden
-                revealContent();
-                e.preventDefault();
-            }
-        }
+    function handleTouchStart(e) {
+        touchStartY = e.touches[0].clientY;
+    }
 
-        function revealContent() {
-            if (isContentRevealed) return;
-            
-            document.getElementById('initialView').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-            isContentRevealed = true;
+    function handleTouchMove(e) {
+        if (!touchStartY || isContentRevealed) return;
+        
+        const touchY = e.touches[0].clientY;
+        const diffY = touchStartY - touchY;
+        
+        if (diffY > 400) { // Swipe omhoog
+            revealContent();
+            e.preventDefault();
         }
+    }
+
+    function revealContent() {
+        if (isContentRevealed) return;
+        
+        document.getElementById('initialView').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        isContentRevealed = true;
+    }
 
         function toggleMobileMenu() {
             const tabs = document.querySelector('.tabs');
